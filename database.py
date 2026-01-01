@@ -15,35 +15,7 @@ async def init_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     
     async with aiosqlite.connect(DB_PATH) as db:
-        # ============ 简易迁移逻辑 ============
-        # 检查 xp_bookmarks 表是否包含 user_id 列 (旧版没有)
-        try:
-             await db.execute("SELECT user_id FROM xp_bookmarks LIMIT 0")
-        except Exception:
-             await db.execute("DROP TABLE IF EXISTS xp_bookmarks")
-             await db.commit()
-             await db.execute("DROP TABLE IF EXISTS xp_profile")
-             await db.execute("DROP TABLE IF EXISTS xp_tag_pairs")
-             await db.commit()
-        
-        # 检查 illust_cache 表是否包含 user_id 列 (v2 新增)
-        try:
-             await db.execute("SELECT user_id FROM illust_cache LIMIT 0")
-        except Exception:
-             # 旧表只有 tags，删除重建
-             await db.execute("DROP TABLE IF EXISTS illust_cache")
-             await db.commit()
-        
-        # 检查 illust_cache 表是否包含 chain_depth 列 (v3 新增 - 连锁深度)
-        try:
-             await db.execute("SELECT chain_depth FROM illust_cache LIMIT 0")
-        except Exception:
-             # 添加新列 (不重建表以保留数据)
-             await db.execute("ALTER TABLE illust_cache ADD COLUMN chain_depth INTEGER DEFAULT 0")
-             await db.execute("ALTER TABLE illust_cache ADD COLUMN chain_parent_id INTEGER DEFAULT NULL")
-             await db.execute("ALTER TABLE illust_cache ADD COLUMN chain_msg_id INTEGER DEFAULT NULL")
-             await db.commit()
-
+        # ============ 先创建表结构 ============
         await db.executescript("""
             -- 推送历史
             CREATE TABLE IF NOT EXISTS push_history (
@@ -163,6 +135,35 @@ async def init_db():
             );
         """)
         await db.commit()
+        
+        # ============ 简易迁移逻辑 (表创建后执行) ============
+        # 检查 xp_bookmarks 表是否包含 user_id 列 (旧版没有)
+        try:
+             await db.execute("SELECT user_id FROM xp_bookmarks LIMIT 0")
+        except Exception:
+             await db.execute("DROP TABLE IF EXISTS xp_bookmarks")
+             await db.commit()
+             await db.execute("DROP TABLE IF EXISTS xp_profile")
+             await db.execute("DROP TABLE IF EXISTS xp_tag_pairs")
+             await db.commit()
+        
+        # 检查 illust_cache 表是否包含 user_id 列 (v2 新增)
+        try:
+             await db.execute("SELECT user_id FROM illust_cache LIMIT 0")
+        except Exception:
+             # 旧表只有 tags，删除重建
+             await db.execute("DROP TABLE IF EXISTS illust_cache")
+             await db.commit()
+        
+        # 检查 illust_cache 表是否包含 chain_depth 列 (v3 新增 - 连锁深度)
+        try:
+             await db.execute("SELECT chain_depth FROM illust_cache LIMIT 0")
+        except Exception:
+             # 添加新列 (不重建表以保留数据)
+             await db.execute("ALTER TABLE illust_cache ADD COLUMN chain_depth INTEGER DEFAULT 0")
+             await db.execute("ALTER TABLE illust_cache ADD COLUMN chain_parent_id INTEGER DEFAULT NULL")
+             await db.execute("ALTER TABLE illust_cache ADD COLUMN chain_msg_id INTEGER DEFAULT NULL")
+             await db.commit()
 
 
 async def cleanup_old_records(days: int = 180):
