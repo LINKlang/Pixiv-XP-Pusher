@@ -12,7 +12,7 @@ from apscheduler.triggers.cron import CronTrigger
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import load_config, CONFIG_PATH
-from database import init_db, cache_illust, get_cached_illust_tags, get_cached_illust, mark_pushed
+from database import init_db, cache_illust, get_cached_illust_tags, get_cached_illust, mark_pushed, sync_blocked_tags_to_xp
 from pixiv_client import PixivClient
 from profiler import XPProfiler
 from fetcher import ContentFetcher
@@ -426,6 +426,11 @@ async def setup_notifiers(config: dict, client: PixivClient, profiler: XPProfile
 async def setup_services(config: dict):
     """初始化全局服务 (DB, Client, Profiler, Notifiers)"""
     await init_db()
+    
+    # 启动时清理已屏蔽的标签
+    removed = await sync_blocked_tags_to_xp()
+    if removed > 0:
+        logger.info(f"🚫 启动时从 XP 画像中移除 {removed} 个已屏蔽标签")
     
     # 公共网络配置
     network_cfg = config.get("network", {})

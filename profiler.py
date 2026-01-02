@@ -694,6 +694,11 @@ class XPProfiler:
         # 保存到数据库 (现有代码)
         await db.update_xp_profile(profile)
         
+        # 清理已屏蔽的标签
+        removed = await db.sync_blocked_tags_to_xp()
+        if removed > 0:
+            logger.info(f"🚫 从 XP 画像中移除 {removed} 个已屏蔽标签")
+        
         logger.info(f"构建XP画像完成，共 {len(profile)} 个Tag，{len(pairs_to_save)} 个热门组合")
         return profile
     
