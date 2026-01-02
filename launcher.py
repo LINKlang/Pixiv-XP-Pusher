@@ -3,6 +3,7 @@ import sys
 import subprocess
 import time
 import shutil
+import yaml
 
 # 设置编码
 sys.stdout.reconfigure(encoding='utf-8')
@@ -225,8 +226,16 @@ def main_menu():
             input("\n   按回车键继续...")
             
         elif choice == '4':
-            print("\n   启动网页管理 (http://localhost:8000)")
-            run_command("uvicorn web.app:app --host 0.0.0.0 --port 8000")
+            # 读取配置中的端口
+            try:
+                with open("config.yaml", "r", encoding="utf-8") as f:
+                    config = yaml.safe_load(f)
+                port = config.get("web", {}).get("port", 8000)
+            except:
+                port = 8000
+            
+            print(f"\n   启动网页管理 (http://localhost:{port})")
+            run_command(f"uvicorn web.app:app --host 0.0.0.0 --port {port}")
             input("\n   按回车键继续...")
             
         elif choice == '5':
